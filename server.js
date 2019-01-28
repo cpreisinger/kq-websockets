@@ -1,4 +1,6 @@
 const WebSocket = require("ws");
+const moment = require("moment");
+const config = require("./config");
 
 const wss = new WebSocket.Server({ port: 12749 });
 const fs = require("fs");
@@ -6,32 +8,37 @@ const fs = require("fs");
 const file = "data/events.txt";
 // const file = "data/events-short-test.txt";
 
+let aliveTimer = null;
+
 var clients = [];
 
-// wss.broadcast = function broadcast(data) {
-//   wss.clients.forEach(function each(client) {
-//     if (client.readyState === WebSocket.OPEN) {
-//       client.send(data);
-//     }
-//   });
-// };
-
 wss.on("connection", ws => {
-  // console.log("connected", ws);
   clients.push(ws);
 
   ws.on("message", message => {
-    console.log("Message received");
-    // Broadcast to everyone else.
-    // wss.clients.forEach(function each(client) {
-    //   if (client !== ws && client.readyState === WebSocket.OPEN) {
-    //     client.send(data);
-    //   }
-    // });
+    // console.log(message);
   });
 
-  ws.send("You connected!");
+  ws.on("close", () => {
+    // Should kill client here from client list
+  });
 });
+
+aliveTimer = setInterval(() => {
+  aliveMessage();
+}, config.keep_alive_interval);
+
+function aliveMessage() {
+  let message = `${moment.now()} = ![k[alive],v[${moment().format(
+    "h:mm:ss A"
+  )}]]!`;
+  console.log(message);
+  clients.map(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
 
 function parseTimestamp(line) {
   return parseInt(line);
@@ -56,19 +63,11 @@ function parseFileLines(wss, file) {
       if (line != "") {
         setTimeout(function() {
           console.log(line);
-          console.log(clients.length);
           clients.map(client => {
             if (client.readyState === WebSocket.OPEN) {
               client.send(line);
             }
           });
-          // wss.broadcast = function broadcast(line) {
-          // wss.clients.forEach(function each(client) {
-          //   if (client.readyState === WebSocket.OPEN) {
-          //     client.send(data);
-          //   }
-          // });
-          // };
         }, timeout);
       }
     });
@@ -76,25 +75,3 @@ function parseFileLines(wss, file) {
 }
 
 parseFileLines(wss, file);
-
-// function parseFileLines(wss, file) {
-//   let timeout = 0;
-//
-//   fs.readFile(file, "utf8", function(err, content) {
-//     let lines = content.split("\n");
-//     let startTime = parseTimestamp(lines[0]);
-//
-//     lines.map(function(line, i) {
-//       let timestamp = parseTimestamp(line);
-//       setTimeout(function() {
-//         if (isNaN(timestamp)) {
-//           setTimeout(function() {
-//             parseFileLines(wss, file);
-//           }, parseTimestamp(lines[lines.length - 2] + 1000));
-//         } else {
-//           console.log(line);
-//         }
-//       }, timestamp - startTime);
-//     });
-//   });
-// }

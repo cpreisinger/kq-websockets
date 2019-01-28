@@ -1,11 +1,16 @@
-const WebSocket = require("ws");
-const ReconnectingWebsocket = require("reconnecting-websocket");
+var config = require("./config");
 
-const cabUrl = "ws://192.168.1.94:12749";
-const clientUrl = "ws://192.168.1.94:8080";
+const WebSocket = require("ws");
+const moment = require("moment");
+
+const cabUrl = "ws://" + config.kq_host + ":" + config.kq_port;
+const clientUrl = "ws://" + config.client_host + ":" + config.client_port;
 
 let cabinet = null;
 let client = null;
+
+let cabinetHealthCheck = null;
+let clientHealthCheck = null;
 
 function attemptCabinetConnection() {
   cabinet = new WebSocket(cabUrl);
@@ -36,24 +41,30 @@ function setCabinetEvents() {
   if (cabinet !== null) {
     cabinet.on("open", () => {
       if (cabinet.readyState === WebSocket.OPEN) {
-        cabinet.send("Connected");
+        console.log("Cabinet connected");
+        cabinet.send("PI connected");
+
+        // cabinetHealthCheck = setInterval(() => {
+        //   cabinet.send("Keep Alive");
+        // }, config.keep_alive_interval);
       }
     });
 
     cabinet.on("message", e => {
+      cabinet.send("PI alive");
       if (client && client.readyState === WebSocket.OPEN) {
-        cabinet.send("Keep alive");
         client.send(e);
       }
     });
 
     cabinet.on("close", () => {
-      console.log("Cabinet closed");
-      // checkConnections();
+      console.log("Cabinet disconnected");
+      clearInterval(cabinetHealthCheck);
     });
 
     cabinet.on("error", err => {
-      console.log("Cabinet error handles");
+      console.log("Cabinet error");
+      clearInterval(cabinetHealthCheck);
     });
   }
 }
@@ -61,19 +72,21 @@ function setCabinetEvents() {
 function setClientEvents() {
   if (client !== null) {
     client.on("open", () => {
-      console.log("Open event called");
+      console.log("Client connected");
       if (client && client.readyState === WebSocket.OPEN) {
-        client.send("Connected");
+        const message = `${moment.now()} = ![k[connected],v[${
+          config.scene_name
+        },${config.scene_code},${config.scene_token}]]!`;
+        client.send(message);
       }
     });
 
     client.on("close", (code, reason) => {
-      console.log("Client closed");
-      // checkConnections();
+      console.log("Client disconnected");
     });
 
     client.on("error", err => {
-      console.log("Client error handled");
+      console.log("Client error");
     });
   }
 }
