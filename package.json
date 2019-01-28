@@ -1,7 +1,7 @@
 {
-  "name": "kq-websocket-emulator",
+  "name": "kq-websockets",
   "version": "0.0.1",
-  "description": "Small node app to emulate a Killer Queen cabinet emitting websocket events",
+  "description": "Few websocket applications. One for emulating a KQ cabinet. One for Raspberry PI middleman. One for external client server",
   "dependencies": {
     "express": "^4.16.4",
     "reconnecting-websocket": "^4.1.10",
