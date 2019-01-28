@@ -1,0 +1,6 @@
+1535413525273 = ![k[playernames],v[alpha,beta,gamma,delta,epsilon,zêta,êta,thêta,iota,kappa]]!
+1535413525275 = ![k[spawn],v[10,False]]!
+1535413526273 = ![k[spawn],v[5,False]]!
+1535413526943 = ![k[spawn],v[7,False]]!
+1535413527446 = ![k[blessMaiden],v[410,860,Red]]!
+1535413527647 = ![k[spawn],v[4,False]]!

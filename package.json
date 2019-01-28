@@ -1,0 +1,15 @@
+{
+  "name": "kq-websocket-emulator",
+  "version": "0.0.1",
+  "description": "Small node app to emulate a Killer Queen cabinet emitting websocket events",
+  "dependencies": {
+    "express": "^4.16.4",
+    "reconnecting-websocket": "^4.1.10",
+    "socket.io": "^2.2.0",
+    "ws": "^6.1.3"
+  },
+  "devDependencies": {
+    "websocket": "^1.0.28",
+    "prettier": "^1.16.1"
+  }
+}
