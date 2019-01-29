@@ -1,9 +1,11 @@
 const config = {};
 
+config.kq_protocol = "ws";
 config.kq_host = "localhost";
 config.kq_port = "12749";
-config.client_host = "localhost";
-config.client_port = "8080";
+config.client_protocol = "wss";
+config.client_host = "bmorekq.ddns.net";
+config.client_port = "";
 
 config.keep_alive_interval = 5000;
 

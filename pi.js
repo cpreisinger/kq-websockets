@@ -3,8 +3,14 @@ var config = require("./config");
 const WebSocket = require("ws");
 const moment = require("moment");
 
-const cabUrl = "ws://" + config.kq_host + ":" + config.kq_port;
-const clientUrl = "ws://" + config.client_host + ":" + config.client_port;
+const cabUrl =
+  config.kq_protocol + "://" + config.kq_host + ":" + config.kq_port;
+const clientUrl =
+  config.client_protocol +
+  "://" +
+  config.client_host +
+  ":" +
+  config.client_port;
 
 let cabinet = null;
 let client = null;
