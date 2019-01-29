@@ -44,6 +44,15 @@ function setCabinetEvents() {
         console.log("Cabinet connected");
         cabinet.send("PI connected");
 
+        if (client && client.readyState === WebSocket.OPEN) {
+          const message = createMessage("cabinetOnline", [
+            config.scene_name,
+            config.scene_code,
+            config.scene_token
+          ]);
+          client.send(message);
+        }
+
         // cabinetHealthCheck = setInterval(() => {
         //   cabinet.send("Keep Alive");
         // }, config.keep_alive_interval);
@@ -59,6 +68,14 @@ function setCabinetEvents() {
 
     cabinet.on("close", () => {
       console.log("Cabinet disconnected");
+      if (client && client.readyState === WebSocket.OPEN) {
+        const message = createMessage("cabinetOffline", [
+          config.scene_name,
+          config.scene_code,
+          config.scene_token
+        ]);
+        client.send(message);
+      }
       clearInterval(cabinetHealthCheck);
     });
 
@@ -74,9 +91,11 @@ function setClientEvents() {
     client.on("open", () => {
       console.log("Client connected");
       if (client && client.readyState === WebSocket.OPEN) {
-        const message = `${moment.now()} = ![k[connected],v[${
-          config.scene_name
-        },${config.scene_code},${config.scene_token}]]!`;
+        const message = createMessage("connected", [
+          config.scene_name,
+          config.scene_code,
+          config.scene_token
+        ]);
         client.send(message);
       }
     });
@@ -89,4 +108,9 @@ function setClientEvents() {
       console.log("Client error");
     });
   }
+}
+
+function createMessage(key, values) {
+  const message = `${moment.now()} = ![k[${key}],v[${values.join(",")}]]!`;
+  return message;
 }
