@@ -1,7 +1,7 @@
 const config = {};
 
 config.kq_protocol = "ws";
-config.kq_host = "localhost";
+config.kq_host = "kq.local";
 config.kq_port = "12749";
 config.client_protocol = "wss";
 config.client_host = "bmorekq.ddns.net";

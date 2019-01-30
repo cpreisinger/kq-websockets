@@ -48,7 +48,7 @@ function setCabinetEvents() {
     cabinet.on("open", () => {
       if (cabinet.readyState === WebSocket.OPEN) {
         console.log("Cabinet connected");
-        cabinet.send("PI connected");
+        // cabinet.send("PI connected");
 
         if (client && client.readyState === WebSocket.OPEN) {
           const message = createMessage("cabinetOnline", [
@@ -66,9 +66,11 @@ function setCabinetEvents() {
     });
 
     cabinet.on("message", e => {
-      cabinet.send("PI alive");
+      //cabinet.send("PI alive");
+      // console.log(e);
+
       if (client && client.readyState === WebSocket.OPEN) {
-        client.send(e);
+        client.send(`${moment.now()} = ${e}`);
       }
     });
 
@@ -83,11 +85,13 @@ function setCabinetEvents() {
         client.send(message);
       }
       clearInterval(cabinetHealthCheck);
+      attemptCabinetConnection();
     });
 
     cabinet.on("error", err => {
       console.log("Cabinet error");
       clearInterval(cabinetHealthCheck);
+      attemptCabinetConnection();
     });
   }
 }
