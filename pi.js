@@ -1,16 +1,21 @@
-var config = require("./config");
+require("dotenv").config();
 
 const WebSocket = require("ws");
 const moment = require("moment");
 
 const cabUrl =
-  config.kq_protocol + "://" + config.kq_host + ":" + config.kq_port;
-const clientUrl =
-  config.client_protocol +
+  process.env.KQ_PROTOCOL +
   "://" +
-  config.client_host +
+  process.env.KQ_HOST +
   ":" +
-  config.client_port;
+  process.env.KQ_PORT;
+
+const clientUrl =
+  process.env.CLIENT_PROTOCOL +
+  "://" +
+  process.env.CLIENT_HOST +
+  ":" +
+  process.env.CLIENT_PORT;
 
 let cabinet = null;
 let client = null;
@@ -52,25 +57,26 @@ function setCabinetEvents() {
 
         if (client && client.readyState === WebSocket.OPEN) {
           const message = createMessage("cabinetOnline", [
-            config.scene_name,
-            config.scene_code,
-            config.scene_token
+            process.env.SCENE_NAME,
+            process.env.SCENE_CODE,
+            process.env.SCENE_TOKEN
           ]);
           client.send(message);
         }
-
-        // cabinetHealthCheck = setInterval(() => {
-        //   cabinet.send("Keep Alive");
-        // }, config.keep_alive_interval);
       }
     });
 
-    cabinet.on("message", e => {
-      //cabinet.send("PI alive");
-      // console.log(e);
-
-      if (client && client.readyState === WebSocket.OPEN) {
-        client.send(`${moment.now()} = ${e}`);
+    cabinet.on("message", message => {
+      const parsedMessage = message.match(/!\[k\[(.+)\],v\[(.*)?\]\]!/);
+      if (parsedMessage[1] == "alive") {
+        if (cabinet.readyState === WebSocket.OPEN) {
+          const aliveMessage = "![k[im alive],v[null]]!";
+          cabinet.send(aliveMessage);
+        }
+      } else {
+        if (client && client.readyState === WebSocket.OPEN) {
+          client.send(`${moment.now()} = ${message}`);
+        }
       }
     });
 
@@ -78,20 +84,20 @@ function setCabinetEvents() {
       console.log("Cabinet disconnected");
       if (client && client.readyState === WebSocket.OPEN) {
         const message = createMessage("cabinetOffline", [
-          config.scene_name,
-          config.scene_code,
-          config.scene_token
+          process.env.SCENE_NAME,
+          process.env.SCENE_CODE,
+          process.env.SCENE_TOKEN
         ]);
         client.send(message);
       }
-      clearInterval(cabinetHealthCheck);
-      attemptCabinetConnection();
+      // clearInterval(cabinetHealthCheck);
+      // attemptCabinetConnection();
     });
 
     cabinet.on("error", err => {
       console.log("Cabinet error");
-      clearInterval(cabinetHealthCheck);
-      attemptCabinetConnection();
+      // clearInterval(cabinetHealthCheck);
+      // attemptCabinetConnection();
     });
   }
 }
@@ -102,9 +108,9 @@ function setClientEvents() {
       console.log("Client connected");
       if (client && client.readyState === WebSocket.OPEN) {
         const message = createMessage("connected", [
-          config.scene_name,
-          config.scene_code,
-          config.scene_token
+          process.env.SCENE_NAME,
+          process.env.SCENE_CODE,
+          process.env.SCENE_TOKEN
         ]);
         client.send(message);
       }

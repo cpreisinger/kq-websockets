@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Few websocket applications. One for emulating a KQ cabinet. One for Raspberry PI middleman. One for external client server",
   "dependencies": {
+    "dotenv": "^6.2.0",
     "express": "^4.16.4",
     "moment": "^2.24.0",
     "reconnecting-websocket": "^4.1.10",
