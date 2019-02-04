@@ -32,7 +32,7 @@ function aliveMessage() {
   let message = `${moment.now()} = ![k[alive],v[${moment().format(
     "h:mm:ss A"
   )}]]!`;
-  console.log(message);
+  // console.log(message);
   clients.map(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);
@@ -62,7 +62,8 @@ function parseFileLines(wss, file) {
 
       if (line != "") {
         setTimeout(function() {
-          console.log(line);
+          // Disabled unless debugging
+          // console.log(line);
           clients.map(client => {
             if (client.readyState === WebSocket.OPEN) {
               client.send(line);

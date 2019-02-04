@@ -13,13 +13,12 @@ cabinet.on("open", message => {
 });
 cabinet.on("message", message => {
   const parsedMessage = message.match(/!\[k\[(.+)\],v\[(.*)?\]\]!/);
+  console.log(`${moment.now()} = ${message}`);
 
   if (parsedMessage[1] == "alive") {
-    console.log("Sending alive");
     const aliveMessage = "![k[im alive],v[null]]!";
     cabinet.send(aliveMessage);
   }
-  console.log(parsedMessage);
 });
 
 // function attemptCabinetConnection() {
