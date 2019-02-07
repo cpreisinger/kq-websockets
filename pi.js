@@ -103,7 +103,17 @@ function setCabinetEvents() {
   }
 }
 
-// TODO: change connected to piConnected
+function heartbeat() {
+  clearTimeout(this.pingTimeout);
+
+  // Use `WebSocket#terminate()` and not `WebSocket#close()`. Delay should be
+  // equal to the interval at which your server sends out pings plus a
+  // conservative assumption of the latency.
+  this.pingTimeout = setTimeout(() => {
+    this.terminate();
+  }, 30000 + 1000);
+}
+
 function setClientEvents() {
   if (client !== null) {
     client.on("open", () => {
@@ -116,6 +126,7 @@ function setClientEvents() {
         ]);
         client.send(message);
       }
+      heartbeat.bind(this);
     });
 
     client.on("close", (code, reason) => {
@@ -125,6 +136,8 @@ function setClientEvents() {
         reason
       );
       client = null;
+
+      clearTimeout(this.pingTimeout);
     });
 
     client.on("error", err => {
