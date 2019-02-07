@@ -52,7 +52,7 @@ function setCabinetEvents() {
   if (cabinet !== null) {
     cabinet.on("open", () => {
       if (cabinet.readyState === WebSocket.OPEN) {
-        console.log("Cabinet connected");
+        console.log(moment().format("llll") + " Cabinet connected");
 
         if (client && client.readyState === WebSocket.OPEN) {
           const message = createMessage("cabinetOnline", [
@@ -84,7 +84,7 @@ function setCabinetEvents() {
     });
 
     cabinet.on("close", () => {
-      console.log("Cabinet disconnected");
+      console.log(moment().format("llll") + " Cabinet disconnected");
       if (client && client.readyState === WebSocket.OPEN) {
         const message = createMessage("cabinetOffline", [
           process.env.SCENE_NAME,
@@ -97,7 +97,7 @@ function setCabinetEvents() {
     });
 
     cabinet.on("error", err => {
-      console.log("Cabinet error");
+      console.log(moment().format("llll") + " Cabinet error", err);
       cabinet = null;
     });
   }
@@ -107,7 +107,7 @@ function setCabinetEvents() {
 function setClientEvents() {
   if (client !== null) {
     client.on("open", () => {
-      console.log("Client connected");
+      console.log(moment().format("llll") + " Client connected");
       if (client && client.readyState === WebSocket.OPEN) {
         const message = createMessage("piOnline", [
           process.env.SCENE_NAME,
@@ -119,12 +119,16 @@ function setClientEvents() {
     });
 
     client.on("close", (code, reason) => {
-      console.log("Client disconnected");
+      console.log(
+        moment().format("llll") + " Client disconnected",
+        code,
+        reason
+      );
       client = null;
     });
 
     client.on("error", err => {
-      console.log("Client error");
+      console.log(moment().format("llll") + " Client error", err);
       client = null;
     });
   }
