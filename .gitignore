@@ -59,3 +59,6 @@ typings/
 
 # next.js build output
 .next
+
+# ignore actual config.json
+config.json

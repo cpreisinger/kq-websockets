@@ -1,0 +1,48 @@
+{
+  "cabinets": [
+    {
+      "id": 0,
+      "protocol": "ws",
+      "ip": "localhost",
+      "port": "12749",
+      "name": "Test Cabinet 0",
+      "code": "TEST0",
+      "token": "test_token_0",
+      "version": "2",
+      "enabled": true,
+      "debug": true
+    },
+    {
+      "id": 1,
+      "protocol": "ws",
+      "ip": "localhost",
+      "port": "12750",
+      "name": "Test Cabinet 1",
+      "code": "TEST1",
+      "token": "test_token_1",
+      "version": "1",
+      "enabled": true,
+      "debug": true
+    }
+  ],
+  "servers": [
+    {
+      "id": 0,
+      "protocol": "ws",
+      "ip": "localhost",
+      "port": "8080",
+      "version": "2",
+      "enabled": true,
+      "debug": true
+    },
+    {
+      "id": 1,
+      "protocol": "ws",
+      "ip": "localhost",
+      "port": "8081",
+      "version": "1",
+      "enabled": true,
+      "debug": true
+    }
+  ]
+}

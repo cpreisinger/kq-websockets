@@ -1,107 +1,235 @@
-require("dotenv").config();
-
 const WebSocket = require("ws");
+const fs = require("fs");
 const moment = require("moment");
+const _ = require("lodash");
 
-const cabUrl =
-  process.env.KQ_PROTOCOL +
-  "://" +
-  process.env.KQ_HOST +
-  ":" +
-  process.env.KQ_PORT;
+let fileData = fs.readFileSync(process.argv[2]);
+let configData = JSON.parse(fileData);
 
-const clientUrl =
-  process.env.CLIENT_PROTOCOL +
-  "://" +
-  process.env.CLIENT_HOST +
-  ":" +
-  process.env.CLIENT_PORT;
+let cabinets = [];
+let servers = [];
 
-let cabinet = null;
-let client = null;
-
-let cabinetHealthCheck = null;
-let clientHealthCheck = null;
-
-function attemptCabinetConnection() {
-  cabinet = new WebSocket(cabUrl);
-  setCabinetEvents();
-}
-function attemptClientConnection() {
-  client = new WebSocket(clientUrl);
-  setClientEvents();
+// Initialization functions to get data structures setup
+function intializeObjects() {
+  initializeCabinetObjects()
+  initializeServerObjects()
 }
 
-attemptCabinetConnection();
-attemptClientConnection();
+function initializeCabinetObjects() {
+  configData.cabinets.forEach(function(cabinetConfig) {
+    cabinets.push({
+      id: cabinetConfig.id,
+      config: cabinetConfig,
+      socket: null
+    })
+  })
+}
+
+function initializeServerObjects() {
+  configData.servers.forEach(function(serverConfig) {
+    servers.push({
+      id: serverConfig.id,
+      config: serverConfig,
+      socket: null
+    })
+  })
+}
+
+// Connection functions
+function initialConnections() {
+  initialCabinetConnections()
+  initialServerConnections()
+}
+
+function initialCabinetConnections() {
+  cabinets.forEach(function(cabinet) {
+    connectToCabinet(cabinet)
+  });
+}
+
+function initialServerConnections() {
+  servers.forEach(function(server) {
+    connectToServer(server);
+  });
+}
+
+function connectToCabinet(cabinet) {
+  let { config } = cabinet;
+  let { enabled, protocol, ip, port } = config;
+
+  if (enabled == true) {
+    // Construct socket url
+    cabinetUrl = `${protocol}://${ip}:${port}`;
+
+    // Create new socket object
+    cabinet.socket = new WebSocket(cabinetUrl);
+
+    // Sets events on new websocket
+    setCabinetEvents(cabinet);
+  }
+}
+
+function connectToServer(server) {
+  let { config } = server;
+  let { enabled, protocol, ip, port } = config;
+
+  if (enabled == true) {
+    // Construct socket url
+    serverUrl = `${protocol}://${ip}:${port}`;
+
+    // Create new socket object
+    server.socket = new WebSocket(serverUrl);
+
+    // Sets events on new websocket
+    setServerEvents(server);
+  }
+}
+
+// Websocket event listeners
+function setCabinetEvents(cabinet) {
+  let { id, config, socket } = cabinet
+  const {name, code, token} = config
+
+  if (socket !== null) {
+    socket.on("open", () => {
+      if (socket.readyState === WebSocket.OPEN) {
+        console.log(
+          `${moment().format("llll")} Cabinet ${id} connected`
+        );
+
+        _.each(servers, (server) => {
+          const {socket} = server
+
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            const message = createMessage("cabinetOnline", [
+              name, code, token
+            ], cabinet, server);
+
+            socket.send(message);
+          }
+        })
+      }
+    });
+
+    socket.on("message", message => {
+      const parsedMessage = message.match(/!\[k\[(.+)\],v\[(.*)?\]\]!/);
+
+      if (parsedMessage[1] == "alive") {
+        if (socket.readyState === WebSocket.OPEN) {
+          const aliveMessage = "![k[im alive],v[null]]!";
+          socket.send(aliveMessage);
+        }
+      } else {
+        _.each(servers, (server) => {
+          const {config, socket} = server
+          const {debug} = config
+
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            const message = createMessage(parsedMessage[1], parsedMessage[2].split(","), cabinet, server)
+
+            if (debug) {
+              socket.send(message);
+            } else {
+              socket.send(`${moment.now()} = ${message}`);
+            }
+          }
+        })
+      }
+    });
+
+    socket.on("close", () => {
+      console.log(
+        `${moment().format("llll")} Cabinet ${id} disconnected`
+      );
+
+      _.each(servers, (server) => {
+        const {socket} = server
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          const message = createMessage("cabinetOffline", [
+            name, code, token
+          ], cabinet, server);
+
+          socket.send(message);
+        }
+      })
+    });
+
+    socket.on("error", err => {
+      console.log(
+        `${moment().format("llll")} Cabinet ${id} error`,
+        err
+      );
+    });
+  }
+}
+
+function setServerEvents(server) {
+  let { id, socket } = server
+
+  if (socket !== null) {
+    socket.on("open", () => {
+      console.log(`${moment().format("llll")} Server ${id} connected`);
+
+      _.each(cabinets, (cabinet) => {
+        const {name, code, token} = cabinet.config
+        if (socket && socket.readyState === WebSocket.OPEN) {
+
+          const message = createMessage("piOnline", [
+            name, code, token
+          ], cabinet, server);
+
+          socket.send(message);
+        }
+      })
+
+      heartbeat.bind(this);
+    });
+
+    socket.on("close", (code, reason) => {
+      console.log(
+        `${moment().format("llll")} Server ${id} disconnected`,
+        code,
+        reason
+      );
+      socket = null;
+
+      clearTimeout(this.pingTimeout);
+    });
+
+    socket.on("error", err => {
+      console.log(`${moment().format("llll")} Server ${id} error`, err);
+      socket = null;
+    });
+  }
+}
+
+function checkConnections() {
+  cabinets.forEach(function(cabinet) {
+    if (
+      cabinet.socket === null ||
+      cabinet.socket.readyState == WebSocket.CLOSED
+    ) {
+      connectToCabinet(cabinet);
+    }
+  });
+
+  servers.forEach(function(server) {
+    if (
+      server.socket === null ||
+      server.socket.readyState == WebSocket.CLOSED
+    ) {
+      connectToServer(server);
+    }
+  });
+}
+
+intializeObjects()
+initialConnections()
 
 setInterval(() => {
   checkConnections();
 }, 5000);
-
-function checkConnections() {
-  if (!cabinet || cabinet.readyState == WebSocket.CLOSED) {
-    attemptCabinetConnection();
-  }
-  if (!client || client.readyState == WebSocket.CLOSED) {
-    attemptClientConnection();
-  }
-}
-
-function setCabinetEvents() {
-  if (cabinet !== null) {
-    cabinet.on("open", () => {
-      if (cabinet.readyState === WebSocket.OPEN) {
-        console.log(moment().format("llll") + " Cabinet connected");
-
-        if (client && client.readyState === WebSocket.OPEN) {
-          const message = createMessage("cabinetOnline", [
-            process.env.SCENE_NAME,
-            process.env.SCENE_CODE,
-            process.env.SCENE_TOKEN
-          ]);
-          client.send(message);
-        }
-      }
-    });
-
-    cabinet.on("message", message => {
-      const parsedMessage = message.match(/!\[k\[(.+)\],v\[(.*)?\]\]!/);
-      if (parsedMessage[1] == "alive") {
-        if (cabinet.readyState === WebSocket.OPEN) {
-          const aliveMessage = "![k[im alive],v[null]]!";
-          cabinet.send(aliveMessage);
-        }
-      } else {
-        if (client && client.readyState === WebSocket.OPEN) {
-          if (process.env.DEBUG) {
-            client.send(message);
-          } else {
-            client.send(`${moment.now()} = ${message}`);
-          }
-        }
-      }
-    });
-
-    cabinet.on("close", () => {
-      console.log(moment().format("llll") + " Cabinet disconnected");
-      if (client && client.readyState === WebSocket.OPEN) {
-        const message = createMessage("cabinetOffline", [
-          process.env.SCENE_NAME,
-          process.env.SCENE_CODE,
-          process.env.SCENE_TOKEN
-        ]);
-        client.send(message);
-      }
-      cabinet = null;
-    });
-
-    cabinet.on("error", err => {
-      console.log(moment().format("llll") + " Cabinet error", err);
-      cabinet = null;
-    });
-  }
-}
 
 function heartbeat() {
   clearTimeout(this.pingTimeout);
@@ -114,40 +242,25 @@ function heartbeat() {
   }, 30000 + 1000);
 }
 
-function setClientEvents() {
-  if (client !== null) {
-    client.on("open", () => {
-      console.log(moment().format("llll") + " Client connected");
-      if (client && client.readyState === WebSocket.OPEN) {
-        const message = createMessage("piOnline", [
-          process.env.SCENE_NAME,
-          process.env.SCENE_CODE,
-          process.env.SCENE_TOKEN
-        ]);
-        client.send(message);
+// Creates message based on keys and values depending on version set
+function createMessage(key, values, cabinet, server) {
+  const {version: gameVersion, code, token} = cabinet.config
+  const {version: messageVersion} = server.config
+
+  switch(messageVersion) {
+    case "1":
+      return `${moment.now()} = ![k[${key}],v[${values.join(",")}]]!`;
+    case "2":
+      let message = {
+        time: moment.now(),
+        code: code,
+        token: token,
+        version: gameVersion,
+        key: key,
+        values: values
       }
-      heartbeat.bind(this);
-    });
-
-    client.on("close", (code, reason) => {
-      console.log(
-        moment().format("llll") + " Client disconnected",
-        code,
-        reason
-      );
-      client = null;
-
-      clearTimeout(this.pingTimeout);
-    });
-
-    client.on("error", err => {
-      console.log(moment().format("llll") + " Client error", err);
-      client = null;
-    });
+      return JSON.stringify(message)
+    default: 
+      return `${moment.now()} = ![k[${key}],v[${values.join(",")}]]!`;
   }
-}
-
-function createMessage(key, values) {
-  const message = `${moment.now()} = ![k[${key}],v[${values.join(",")}]]!`;
-  return message;
 }
